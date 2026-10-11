@@ -1,6 +1,17 @@
 from flask import Flask, request
 
-import ayarlar
+import os
+
+try:
+    import ayarlar
+
+    DOGRULAMA_KELIMESI = ayarlar.DOGRULAMA_KELIMESI
+    TOKEN = ayarlar.TOKEN
+    TELEFON_ID = ayarlar.TELEFON_ID
+except ImportError:
+    DOGRULAMA_KELIMESI = os.environ["DOGRULAMA_KELIMESI"]
+    TOKEN = os.environ["TOKEN"]
+    TELEFON_ID = os.environ["TELEFON_ID"]
 import requests
 import yemek
 from datetime import date, timedelta
@@ -18,13 +29,13 @@ def dogrula():
     mod = request.args.get("hub.mode")
     kelime = request.args.get("hub.verify_token")
     sinama = request.args.get("hub.challenge")
-    if mod == "subscribe" and kelime == ayarlar.DOGRULAMA_KELIMESI:
+    if mod == "subscribe" and kelime == DOGRULAMA_KELIMESI:
         return sinama
     return "Yanlış kelime", 403
 
 def cevap_gonder(numara, metin):
-    adres = f"https://graph.facebook.com/v25.0/{ayarlar.TELEFON_ID}/messages"
-    basliklar = {"Authorization": "Bearer " + ayarlar.TOKEN}
+    adres = f"https://graph.facebook.com/v25.0/{TELEFON_ID}/messages"
+    basliklar = {"Authorization": "Bearer " + TOKEN}
     paket = {
         "messaging_product": "whatsapp",
         "to": numara,
