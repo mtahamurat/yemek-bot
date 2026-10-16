@@ -35,7 +35,7 @@ def menu_oku(dosya):
         for sutun, t in tarih_sutunlari.items():
             yemek = satir[sutun]
             if yemek:
-                menu[t].append(yemek.replace("\n", ", "))
+                menu[t].append(yemek.replace("\n", ", ").replace("*", "").strip())
 
     return menu
 
