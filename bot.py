@@ -15,6 +15,7 @@ except ImportError:
     TOKEN = os.environ["TOKEN"]
     TELEFON_ID = os.environ["TELEFON_ID"]
 GROQ_ANAHTARI = os.environ.get("GROQ_ANAHTARI", "")
+SOHBET_ISMI = os.environ.get("SOHBET_ISMI", "")
 SOHBET_NUMARALARI = {n.strip() for n in os.environ.get("SOHBET_NUMARALARI", "").split(",") if n.strip()}
 import requests
 import yemek
@@ -152,11 +153,14 @@ def mesaj_geldi():
 
 GROQ_MODEL = "openai/gpt-oss-120b"
 SISTEM_MESAJI = (
-    "Sen Taha'nın yaptığı KYK Yemek Botu'nun sohbet modusun. Türkçe, samimi, sıcak ve kısa konuş "
+    "Sen Taha'nın bu sohbet için özel yaptığı bir WhatsApp botusun. Kendini tanıtman gerekirse "
+    "'Taha'nın sana özel botuyum' de. Türkçe, samimi, sıcak ve kısa konuş "
     "(WhatsApp mesajı gibi, en fazla birkaç cümle). Karşındaki Taha'nın arkadaşı, sıkılmış ya da "
     "moralsiz olabilir; dinle, destek ol, gerekirse espri yap. Uzun listeler ve markdown kullanma. "
     "Bilmediğin şeyi uydurma."
 )
+if SOHBET_ISMI:
+    SISTEM_MESAJI += f" Karşındakine '{SOHBET_ISMI}' diye hitap et, ama her mesajda tekrarlama."
 SOHBETTE = set()
 GECMIS = {}
 
@@ -214,7 +218,8 @@ def sohbet_mi(kimden, yazi):
         return True
     if soru == "sohbet":
         SOHBETTE.add(kimden)
-        cevap_gonder(kimden, "Sohbet modu açık 🙂 Mesajların yapay zeka servisine (Groq) gider. Çıkmak için 'çık' yaz. Anlat bakalım, ne var ne yok?")
+        selam = f"Selam {SOHBET_ISMI}" if SOHBET_ISMI else "Selam"
+        cevap_gonder(kimden, f"{selam} 🙂 Ben Taha'nın sana özel botuyum. Mesajların yapay zeka servisine (Groq) gider. Çıkmak için 'çık' yaz. Anlat bakalım, ne var ne yok?")
         return True
     return False
 
