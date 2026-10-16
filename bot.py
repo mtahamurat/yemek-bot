@@ -36,17 +36,58 @@ def dogrula():
         return sinama
     return "Yanlış kelime", 403
 
-def cevap_gonder(numara, metin):
+def gonder(paket):
     adres = f"https://graph.facebook.com/v25.0/{TELEFON_ID}/messages"
     basliklar = {"Authorization": "Bearer " + TOKEN}
-    paket = {
+    sonuc = requests.post(adres, headers=basliklar, json=paket, timeout=10)
+    print(sonuc.status_code, sonuc.text)
+    return sonuc
+
+
+def cevap_gonder(numara, metin):
+    gonder({
         "messaging_product": "whatsapp",
         "to": numara,
         "type": "text",
         "text": {"body": metin},
+    })
+
+
+YARDIM_METNI = "bugün, yarın, 2 gün sonra, 25 ekim, kahvaltı ya da akşam yaz"
+
+
+def liste_gonder(numara):
+    paket = {
+        "messaging_product": "whatsapp",
+        "to": numara,
+        "type": "interactive",
+        "interactive": {
+            "type": "list",
+            "body": {"text": "Merhaba! Hangi menüye bakmak istersin? Listeden seçebilir ya da yazabilirsin: " + YARDIM_METNI},
+            "action": {
+                "button": "Menüyü seç",
+                "sections": [
+                    {"title": "Bugün", "rows": [
+                        {"id": "bugun", "title": "Tüm gün"},
+                        {"id": "bugun kahvalti", "title": "Kahvaltı"},
+                        {"id": "bugun aksam", "title": "Akşam yemeği"},
+                    ]},
+                    {"title": "Yarın", "rows": [
+                        {"id": "yarin", "title": "Tüm gün"},
+                        {"id": "yarin kahvalti", "title": "Kahvaltı"},
+                        {"id": "yarin aksam", "title": "Akşam yemeği"},
+                    ]},
+                    {"title": "Diğer", "rows": [
+                        {"id": "2 gun sonra", "title": "2 gün sonra"},
+                    ]},
+                ],
+            },
+        },
     }
-    sonuc = requests.post(adres, headers=basliklar, json=paket, timeout=10)
-    print(sonuc.status_code, sonuc.text)
+    sonuc = gonder(paket)
+    if sonuc.status_code != 200:
+        cevap_gonder(numara, YARDIM_METNI)
+
 
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -107,6 +148,22 @@ def mesaj_geldi():
     return "ok"
 
 
+def cevapla(kimden, soru):
+    tarih = tarih_bul(soru)
+    if "kahvalti" in soru or "sabah" in soru:
+        ogun = "kahvalti"
+    elif "aksam" in soru:
+        ogun = "aksam"
+    else:
+        ogun = None
+    if tarih is None and ogun is None and "ne var" not in soru and "menu" not in soru:
+        liste_gonder(kimden)
+    else:
+        if tarih is None:
+            tarih = bugun()
+        cevap_gonder(kimden, yemek.menu_metni(tarih, ogun))
+
+
 def mesaj_isle(veri):
     deger = veri["entry"][0]["changes"][0]["value"]
 
@@ -115,26 +172,18 @@ def mesaj_isle(veri):
         if mesaj["id"] in GORULEN:
             return
         GORULEN.append(mesaj["id"])
-        if mesaj["type"] != "text":
-            cevap_gonder(mesaj["from"], "Şimdilik sadece yazılı mesajları anlıyorum. bugün, yarın, kahvaltı ya da akşam yaz")
+        kimden = mesaj["from"]
         if mesaj["type"] == "text":
-            kimden = mesaj["from"]
             yazi = mesaj["text"]["body"]
             print(kimden, "yazdı:", yazi)
-            soru = temizle(yazi)
-            tarih = tarih_bul(soru)
-            if "kahvalti" in soru or "sabah" in soru:
-                ogun = "kahvalti"
-            elif "aksam" in soru:
-                ogun = "aksam"
-            else:
-                ogun = None
-            if tarih is None and ogun is None and "ne var" not in soru and "menu" not in soru:
-                cevap_gonder(kimden, "bugün, yarın, 2 gün sonra, 25 ekim, kahvaltı ya da akşam yaz")
-            else:
-                if tarih is None:
-                    tarih = bugun()
-                cevap_gonder(kimden, yemek.menu_metni(tarih, ogun))
+            cevapla(kimden, temizle(yazi))
+        elif mesaj["type"] == "interactive":
+            secim = mesaj["interactive"].get("list_reply", {}).get("id", "")
+            print(kimden, "seçti:", secim)
+            cevapla(kimden, secim)
+        else:
+            cevap_gonder(kimden, "Şimdilik sadece yazılı mesajları anlıyorum. " + YARDIM_METNI)
+
 
 if __name__ == "__main__":
     app.run(port=5000)
