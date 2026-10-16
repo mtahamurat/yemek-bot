@@ -55,14 +55,18 @@ def goster(gun):
         print(" -", yemek)
     print()
 
-def menu_metni(gun):
-    satirlar = [gun.strftime("%d.%m.%Y"), "", "KAHVALTI:"]
-    for yemek in kahvalti.get(gun, ["Menü bulunamadı"]):
-        satirlar.append("- " + yemek)
-    satirlar.append("")
-    satirlar.append("AKŞAM:")
-    for yemek in aksam.get(gun, ["Menü bulunamadı"]):
-        satirlar.append("- " + yemek)
+def menu_metni(gun, ogun=None):
+    satirlar = [gun.strftime("%d.%m.%Y")]
+    if ogun is None or ogun == "kahvalti":
+        satirlar.append("")
+        satirlar.append("KAHVALTI:")
+        for yemek in kahvalti.get(gun, ["Menü bulunamadı"]):
+            satirlar.append("- " + yemek)
+    if ogun is None or ogun == "aksam":
+        satirlar.append("")
+        satirlar.append("AKŞAM:")
+        for yemek in aksam.get(gun, ["Menü bulunamadı"]):
+            satirlar.append("- " + yemek)
     return "\n".join(satirlar)
 
 if __name__ == "__main__":

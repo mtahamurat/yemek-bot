@@ -1,3 +1,5 @@
+from random import random
+
 from flask import Flask, request
 
 import os
@@ -45,6 +47,22 @@ def cevap_gonder(numara, metin):
     sonuc = requests.post(adres, headers=basliklar, json=paket)
     print(sonuc.status_code, sonuc.text)
 
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
+
+def bugun():
+    return datetime.now(ZoneInfo("Europe/Istanbul")).date()
+
+
+def temizle(metin):
+    metin = metin.strip().lower()
+    cevirme = {"ı": "i", "ş": "s", "ğ": "g", "ü": "u", "ö": "o", "ç": "c", "\u0307": ""}
+    for eski, yeni in cevirme.items():
+        metin = metin.replace(eski, yeni)
+    return metin
+
+
 @app.route("/webhook", methods=["POST"])
 def mesaj_geldi():
     veri = request.get_json()
@@ -56,16 +74,26 @@ def mesaj_geldi():
             kimden = mesaj["from"]
             yazi = mesaj["text"]["body"]
             print(kimden, "yazdı:", yazi)
-            soru = yazi.strip().lower()
-            if soru in ("bugün", "bugun"):
-                cevap_gonder(kimden, yemek.menu_metni(date.today()))
-            elif soru in ("yarın", "yarin"):
-                cevap_gonder(kimden, yemek.menu_metni(date.today() + timedelta(days=1)))
+            soru = temizle(yazi)
+            if "yarin" in soru:
+                tarih = bugun() + timedelta(days=1)
+            elif "bugun" in soru:
+                tarih = bugun()
             else:
-                cevap_gonder(kimden, "bugün ya da yarın yaz")
-
+                tarih = None
+            if "kahvalti" in soru or "sabah" in soru:
+                ogun = "kahvalti"
+            elif "aksam" in soru:
+                ogun = "aksam"
+            else:
+                ogun = None
+            if tarih is None and ogun is None:
+                cevap_gonder(kimden, "bugün, yarın, kahvaltı ya da akşam yaz")
+            else:
+                if tarih is None:
+                    tarih = bugun()
+                cevap_gonder(kimden, yemek.menu_metni(tarih, ogun))
     return "ok"
-
 
 if __name__ == "__main__":
     app.run(port=5000)
