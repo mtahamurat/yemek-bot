@@ -44,6 +44,12 @@ Gizli bilgiler yerelde `ayarlar.py`'den, sunucuda ortam değişkenlerinden okunu
 - `DOGRULAMA_KELIMESI`: webhook doğrulama kelimesi
 - `TOKEN`: WhatsApp API erişim anahtarı
 - `TELEFON_ID`: WhatsApp telefon numarası ID'si
+- `GROQ_ANAHTARI` (isteğe bağlı): sohbet modu için Groq API anahtarı
+- `SOHBET_NUMARALARI` (isteğe bağlı): sohbet modunu kullanabilecek numaralar, virgülle ayrılmış (`905xxxxxxxxx`)
+
+## Sohbet modu
+
+Sadece izin verilen numaralar `sohbet` yazarak yapay zeka ile sohbet edebilir (Groq üzerinde `openai/gpt-oss-120b`). `çık` yazınca menü moduna döner. Geçmiş sadece bellekte tutulur. Diğer kullanıcılar için hiçbir şey değişmez.
 
 ## Menüyü güncelleme
 
@@ -51,7 +57,7 @@ Yeni ayın `kahvalti.pdf` ve `aksam.pdf` dosyalarını aynı isimlerle değişti
 
 ## Gizlilik
 
-Bot yalnızca gelen mesaja cevap verir. Telefon numarası ve mesaj metni sadece cevap vermek için kullanılır, paylaşılmaz. Ayrıntılar: [Gizlilik politikası](https://mtahamurat.github.io/yemek-bot/privacy.html)
+Bot yalnızca gelen mesaja cevap verir. Telefon numarası ve mesaj metni sadece cevap vermek için kullanılır, paylaşılmaz (isteğe bağlı sohbet modunda mesajlar yapay zeka servisine gider). Ayrıntılar: [Gizlilik politikası](https://mtahamurat.github.io/yemek-bot/privacy.html)
 
 ## Sınırlar
 
@@ -107,6 +113,12 @@ Secrets are read from `ayarlar.py` locally, or from environment variables in pro
 - `DOGRULAMA_KELIMESI`: webhook verify token
 - `TOKEN`: WhatsApp API access token
 - `TELEFON_ID`: WhatsApp phone number ID
+- `GROQ_ANAHTARI` (optional): Groq API key for chat mode
+- `SOHBET_NUMARALARI` (optional): comma-separated numbers allowed to use chat mode (`905xxxxxxxxx`)
+
+## Chat mode
+
+Only allow-listed numbers can send `sohbet` to chat with an AI (`openai/gpt-oss-120b` on Groq); `çık` returns to menu mode. History is kept in memory only. Nothing changes for other users.
 
 ## Updating the menu
 
@@ -114,7 +126,7 @@ Replace `kahvalti.pdf` and `aksam.pdf` with the new month's files (same names) a
 
 ## Privacy
 
-The bot only replies to incoming messages. The phone number and message text are used solely to reply and are not shared. Details: [Privacy policy](https://mtahamurat.github.io/yemek-bot/privacy.html)
+The bot only replies to incoming messages. The phone number and message text are used solely to reply and are not shared (in the optional chat mode, messages go to the AI provider). Details: [Privacy policy](https://mtahamurat.github.io/yemek-bot/privacy.html)
 
 ## Limitations
 

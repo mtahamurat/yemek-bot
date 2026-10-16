@@ -14,6 +14,8 @@ except ImportError:
     DOGRULAMA_KELIMESI = os.environ["DOGRULAMA_KELIMESI"]
     TOKEN = os.environ["TOKEN"]
     TELEFON_ID = os.environ["TELEFON_ID"]
+GROQ_ANAHTARI = os.environ.get("GROQ_ANAHTARI", "")
+SOHBET_NUMARALARI = {n.strip() for n in os.environ.get("SOHBET_NUMARALARI", "").split(",") if n.strip()}
 import requests
 import yemek
 from datetime import date, timedelta
@@ -148,6 +150,75 @@ def mesaj_geldi():
     return "ok"
 
 
+GROQ_MODEL = "openai/gpt-oss-120b"
+SISTEM_MESAJI = (
+    "Sen Taha'nın yaptığı KYK Yemek Botu'nun sohbet modusun. Türkçe, samimi, sıcak ve kısa konuş "
+    "(WhatsApp mesajı gibi, en fazla birkaç cümle). Karşındaki Taha'nın arkadaşı, sıkılmış ya da "
+    "moralsiz olabilir; dinle, destek ol, gerekirse espri yap. Uzun listeler ve markdown kullanma. "
+    "Bilmediğin şeyi uydurma."
+)
+SOHBETTE = set()
+GECMIS = {}
+
+
+def yapay_zeka_cevabi(kimden, yazi):
+    gecmis = GECMIS.setdefault(kimden, [])
+    gecmis.append({"role": "user", "content": yazi})
+    del gecmis[:-20]
+    try:
+        sonuc = requests.post(
+            "https://api.groq.com/openai/v1/chat/completions",
+            headers={"Authorization": "Bearer " + GROQ_ANAHTARI},
+            json={
+                "model": GROQ_MODEL,
+                "messages": [{"role": "system", "content": SISTEM_MESAJI}] + gecmis,
+                "reasoning_effort": "low",
+                "max_completion_tokens": 1000,
+            },
+            timeout=30,
+        )
+    except requests.RequestException as hata:
+        print("GROQ HATA:", repr(hata))
+        gecmis.pop()
+        return "Bağlanamadım, birazdan tekrar dene."
+    if sonuc.status_code != 200:
+        print("GROQ", sonuc.status_code, sonuc.text[:300])
+        gecmis.pop()
+        if sonuc.status_code == 429:
+            return "Biraz yoğunum, birazdan tekrar dene."
+        return "Bir sorun oldu, birazdan tekrar dene."
+    try:
+        cevap = (sonuc.json()["choices"][0]["message"].get("content") or "").strip()
+    except (ValueError, KeyError, IndexError):
+        cevap = ""
+    if not cevap:
+        gecmis.pop()
+        return "Cevap üretemedim, bir daha yazar mısın?"
+    gecmis.append({"role": "assistant", "content": cevap})
+    del gecmis[:-20]
+    return cevap[:4000]
+
+
+def sohbet_mi(kimden, yazi):
+    """Sohbet modu mesajı ise cevaplar ve True döner."""
+    if kimden not in SOHBET_NUMARALARI:
+        return False
+    soru = temizle(yazi).strip(" .!")
+    if kimden in SOHBETTE:
+        if soru in ("cik", "bitir"):
+            SOHBETTE.discard(kimden)
+            GECMIS.pop(kimden, None)
+            cevap_gonder(kimden, "Sohbet bitti. Menü için bugün, yarın gibi bir şey yazabilirsin. Tekrar konuşmak için 'sohbet' yaz.")
+        else:
+            cevap_gonder(kimden, yapay_zeka_cevabi(kimden, yazi))
+        return True
+    if soru == "sohbet":
+        SOHBETTE.add(kimden)
+        cevap_gonder(kimden, "Sohbet modu açık 🙂 Mesajların yapay zeka servisine (Groq) gider. Çıkmak için 'çık' yaz. Anlat bakalım, ne var ne yok?")
+        return True
+    return False
+
+
 def cevapla(kimden, soru):
     tarih = tarih_bul(soru)
     if "kahvalti" in soru or "sabah" in soru:
@@ -176,7 +247,8 @@ def mesaj_isle(veri):
         if mesaj["type"] == "text":
             yazi = mesaj["text"]["body"]
             print(kimden, "yazdı:", yazi)
-            cevapla(kimden, temizle(yazi))
+            if not sohbet_mi(kimden, yazi):
+                cevapla(kimden, temizle(yazi))
         elif mesaj["type"] == "interactive":
             secim = mesaj["interactive"].get("list_reply", {}).get("id", "")
             print(kimden, "seçti:", secim)
