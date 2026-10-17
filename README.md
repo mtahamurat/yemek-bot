@@ -45,6 +45,7 @@ Gizli bilgiler yerelde `ayarlar.py`'den, sunucuda ortam değişkenlerinden okunu
 - `TOKEN`: WhatsApp API erişim anahtarı
 - `TELEFON_ID`: WhatsApp telefon numarası ID'si
 - `GROQ_ANAHTARI` (isteğe bağlı): sohbet modu için Groq API anahtarı
+- `META_APP_SECRET` (önerilir): Meta uygulamasının App Secret'ı, gelen isteklerin imzasını doğrulamak için
 - `SAHIP_NUMARASI` (isteğe bağlı): önerilerin iletileceği numara (`905xxxxxxxxx`)
 - `SOHBET_NUMARALARI` (isteğe bağlı): sohbet modunu kullanabilecek numaralar, virgülle ayrılmış (`905xxxxxxxxx`)
 
@@ -119,6 +120,7 @@ Secrets are read from `ayarlar.py` locally, or from environment variables in pro
 - `TOKEN`: WhatsApp API access token
 - `TELEFON_ID`: WhatsApp phone number ID
 - `GROQ_ANAHTARI` (optional): Groq API key for chat mode
+- `META_APP_SECRET` (recommended): Meta app secret, used to verify the signature of incoming webhooks
 - `SAHIP_NUMARASI` (optional): number that receives suggestions (`905xxxxxxxxx`)
 - `SOHBET_NUMARALARI` (optional): comma-separated numbers allowed to use chat mode (`905xxxxxxxxx`)
 

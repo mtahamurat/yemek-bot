@@ -1,7 +1,11 @@
 from flask import Flask, request
 
+import hashlib
+import hmac
+import json
 import os
 import re
+import time
 from collections import deque
 
 try:
@@ -15,6 +19,7 @@ except ImportError:
     TOKEN = os.environ["TOKEN"]
     TELEFON_ID = os.environ["TELEFON_ID"]
 GROQ_ANAHTARI = os.environ.get("GROQ_ANAHTARI", "")
+META_APP_SECRET = os.environ.get("META_APP_SECRET", "").strip()
 SAHIP_NUMARASI = os.environ.get("SAHIP_NUMARASI", "").strip()
 SOHBET_ISMI = os.environ.get("SOHBET_ISMI", "")
 SOHBET_NUMARALARI = {n.strip() for n in os.environ.get("SOHBET_NUMARALARI", "").split(",") if n.strip()}
@@ -23,6 +28,7 @@ import yemek
 from datetime import date, timedelta
 
 app = Flask(__name__)
+app.config["MAX_CONTENT_LENGTH"] = 256 * 1024
 GORULEN = deque(maxlen=500)
 
 
@@ -68,7 +74,7 @@ def liste_gonder(numara):
         "interactive": {
             "type": "list",
             "body": {"text": "Merhaba! Hangi menüye bakmak istersin? Listeden seç ya da yaz, örneğin: yarın akşam"},
-            "footer": {"text": "Fikrin varsa: önce \"öneri\" yaz, sonra fikrini"},
+            "footer": {"text": "Fikrin varsa: önce \"öneri\" yaz, devamında fikrini"},
             "action": {
                 "button": "Menüyü seç",
                 "sections": [
@@ -145,10 +151,37 @@ def tarih_bul(soru):
     return None
 
 
+SON_MESAJLAR = {}
+HIZ_LIMITI = 15  # bir numaradan 60 saniyede en fazla bu kadar mesaj
+
+
+def hiz_asildi(kimden):
+    simdi = time.time()
+    kayit = SON_MESAJLAR.setdefault(kimden, deque())
+    while kayit and simdi - kayit[0] > 60:
+        kayit.popleft()
+    if len(kayit) >= HIZ_LIMITI:
+        return True
+    kayit.append(simdi)
+    return False
+
+
+def imza_gecerli(govde):
+    if not META_APP_SECRET:
+        return True
+    gelen = request.headers.get("X-Hub-Signature-256", "")
+    beklenen = "sha256=" + hmac.new(META_APP_SECRET.encode(), govde, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(gelen, beklenen)
+
+
 @app.route("/webhook", methods=["POST"])
 def mesaj_geldi():
+    govde = request.get_data()
+    if not imza_gecerli(govde):
+        print("IMZA HATALI, istek reddedildi")
+        return "Yetkisiz", 403
     try:
-        mesaj_isle(request.get_json())
+        mesaj_isle(json.loads(govde))
     except Exception as hata:
         print("HATA:", repr(hata))
     return "ok"
@@ -232,7 +265,7 @@ def sohbet_mi(kimden, yazi):
 
 
 ONERI_SAYAC = {}
-ONERI_LIMIT = 5
+ONERI_LIMIT = 5  # kişi başı günlük
 
 
 def oneri_mi(kimden, yazi):
@@ -246,10 +279,13 @@ def oneri_mi(kimden, yazi):
     if not metin:
         cevap_gonder(kimden, "Mesajının başına \"öneri\" yaz, devamına fikrini ekle. Örnek: öneri haftalık menü de gelsin")
         return True
-    if ONERI_SAYAC.get(kimden, 0) >= ONERI_LIMIT:
-        cevap_gonder(kimden, "Çok fikrin var, teşekkürler! Biraz sonra tekrar yazabilirsin.")
+    gun, adet = ONERI_SAYAC.get(kimden, (None, 0))
+    if gun != bugun():
+        adet = 0
+    if adet >= ONERI_LIMIT:
+        cevap_gonder(kimden, "Bugünlük fikir hakkın doldu, teşekkürler! Yarın tekrar yazabilirsin.")
         return True
-    ONERI_SAYAC[kimden] = ONERI_SAYAC.get(kimden, 0) + 1
+    ONERI_SAYAC[kimden] = (bugun(), adet + 1)
     metin = metin[:1000]
     print("ONERI:", kimden, metin)
     if SAHIP_NUMARASI:
@@ -291,6 +327,9 @@ def mesaj_isle(veri):
             return
         GORULEN.append(mesaj["id"])
         kimden = mesaj["from"]
+        if hiz_asildi(kimden):
+            print("HIZ SINIRI:", kimden)
+            return
         if mesaj["type"] == "text":
             yazi = mesaj["text"]["body"]
             print(kimden, "yazdı:", yazi)
