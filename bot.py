@@ -57,7 +57,7 @@ def cevap_gonder(numara, metin):
     })
 
 
-YARDIM_METNI = "bugün, yarın, 2 gün sonra, 25 ekim, kahvaltı ya da akşam yaz. Fikrin varsa: öneri <mesajın>"
+YARDIM_METNI = "bugün, yarın, 2 gün sonra, 25 ekim, kahvaltı ya da akşam yaz"
 
 
 def liste_gonder(numara):
@@ -67,7 +67,8 @@ def liste_gonder(numara):
         "type": "interactive",
         "interactive": {
             "type": "list",
-            "body": {"text": "Merhaba! Hangi menüye bakmak istersin? Listeden seçebilir ya da yazabilirsin: " + YARDIM_METNI},
+            "body": {"text": "Merhaba! Hangi menüye bakmak istersin? Listeden seç ya da yaz, örneğin: yarın akşam"},
+            "footer": {"text": "Fikrin varsa: önce \"öneri\" yaz, sonra fikrini"},
             "action": {
                 "button": "Menüyü seç",
                 "sections": [
@@ -243,7 +244,7 @@ def oneri_mi(kimden, yazi):
     parcalar = yazi.strip().split(None, 1)
     metin = parcalar[1].strip() if len(parcalar) > 1 else ""
     if not metin:
-        cevap_gonder(kimden, "Fikrini şöyle yaz: öneri haftalık menü de gelsin")
+        cevap_gonder(kimden, "Mesajının başına \"öneri\" yaz, devamına fikrini ekle. Örnek: öneri haftalık menü de gelsin")
         return True
     if ONERI_SAYAC.get(kimden, 0) >= ONERI_LIMIT:
         cevap_gonder(kimden, "Çok fikrin var, teşekkürler! Biraz sonra tekrar yazabilirsin.")
