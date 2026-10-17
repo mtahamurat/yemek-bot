@@ -11,6 +11,9 @@ Bota şunlardan birini yazabilirsin, büyük/küçük harf ve Türkçe karakter 
 | `bugün`, `yarın`, `dün` | O günün kahvaltı ve akşam menüsü |
 | `2 gün sonra`, `öbür gün` | Belirtilen gün sonrasının menüsü |
 | `25 ekim`, `25.10`, `25/10` | O tarihin menüsü |
+| `cuma`, `salı akşam`, `haftaya pazartesi` | En yakın o günün menüsü |
+| `öneri <fikrin>` | Fikri proje sahibine iletir |
+| `sağol`, `teşekkürler` | Afiyet olsun cevabı |
 | `kahvaltı`, `akşam` | Sadece o öğün (tek başına yazılırsa bugünün) |
 | `yarın akşam`, `25 ekim kahvaltı` | Gün ve öğün birlikte |
 | `ne var`, `menü` | Bugünün menüsü |
@@ -67,7 +70,8 @@ Bot yalnızca gelen mesaja cevap verir. Telefon numarası ve mesaj metni sadece 
 
 ## Sınırlar
 
-- Menü sadece PDF'i yüklenmiş aylar için vardır, diğer günler "Menü bulunamadı" der.
+- Menü sadece PDF'i yüklenmiş aylar için vardır; yüklenmemiş bir ay sorulursa bot "henüz yüklenmedi" der.
+- Kullanıcı sayacı ve sohbet geçmişi bellekte tutulur, sunucu yeniden başlayınca sıfırlanır.
 - Menü verisi PDF düzeninin aynı kalmasına bağlıdır.
 - Ücretsiz sunucu planı kullanıldığı için uzun bir hareketsizlikten sonra ilk cevap birkaç saniye gecikebilir.
 
