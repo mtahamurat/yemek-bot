@@ -332,7 +332,7 @@ def oneri_mi(kimden, yazi):
                 "messaging_product": "whatsapp",
                 "to": SAHIP_NUMARASI,
                 "type": "text",
-                "text": {"body": f"Öneri ({kimden}):\n{metin}"},
+                "text": {"body": f"Öneri ({kimden}):\n{metin}\n\nCevaplamak için: cevap {kimden} mesajın"},
             })
         except requests.RequestException as hata:
             print("ONERI iletilemedi:", repr(hata))
@@ -398,7 +398,7 @@ def istatistik_metni():
         if (gun - g).days < 7:
             son7 |= kisiler
     return "\n".join([
-        "İstatistik (seni saymıyorum)",
+        "İstatistik",
         f"Bugün: {len(GUNLUK_KULLANICI.get(gun, set()))} kişi",
         f"Dün: {len(GUNLUK_KULLANICI.get(gun - timedelta(days=1), set()))} kişi",
         f"Son 7 gün: {len(son7)} kişi",
@@ -408,9 +408,53 @@ def istatistik_metni():
     ])
 
 
+def numara_duzelt(ham):
+    """'0541...', '541...', '+90 541...' -> '90541...' (geçersizse None)."""
+    rakam = re.sub(r"\D", "", ham)
+    if rakam.startswith("0"):
+        rakam = "9" + rakam
+    elif len(rakam) == 10 and rakam.startswith("5"):
+        rakam = "90" + rakam
+    return rakam if len(rakam) == 12 and rakam.startswith("905") else None
+
+
+def cevap_ilet(yazi):
+    """'cevap 905xxxxxxxxx mesaj' komutunu işler, sahibe gidecek sonucu döner."""
+    # 'cevap' kelimesinden sonra gelen rakam parçalarını numara say (boşluklu yazılabilir)
+    parcalar = list(re.finditer(r"\S+", yazi))[1:]
+    numara_ham, bitis = "", None
+    for p in parcalar:
+        if not re.fullmatch(r"\+?\d+", p.group()) or len(re.sub(r"\D", "", numara_ham)) >= 12:
+            break
+        numara_ham += p.group()
+        bitis = p.end()
+    mesaj = yazi[bitis:].strip()[:1000] if bitis else ""
+    if not numara_ham or not mesaj:
+        return "Kullanım: cevap 905xxxxxxxxx mesajın"
+    numara = numara_duzelt(numara_ham)
+    if not numara:
+        return "Numara geçersiz. Örnek: cevap 905xxxxxxxxx Teşekkürler!"
+    try:
+        sonuc = gonder({
+            "messaging_product": "whatsapp",
+            "to": numara,
+            "type": "text",
+            "text": {"body": "Prof. Taha'dan cevap:\n" + mesaj},
+        })
+    except requests.RequestException as hata:
+        print("CEVAP iletilemedi:", repr(hata))
+        return "İletilemedi, bağlantı hatası. Biraz sonra tekrar dene."
+    if sonuc.status_code == 200:
+        return f"İletildi: {numara}"
+    return "İletilemedi. Kişi son 24 saatte bota yazmamış olabilir."
+
+
 def sahip_komutu_mu(kimden, yazi):
     if not SAHIP_NUMARASI or kimden != SAHIP_NUMARASI:
         return False
+    if temizle(yazi).split()[:1] == ["cevap"]:
+        cevap_gonder(kimden, cevap_ilet(yazi))
+        return True
     if temizle(yazi).strip(" .!?") in ("istatistik", "istatistikler", "stat"):
         cevap_gonder(kimden, istatistik_metni())
         return True
