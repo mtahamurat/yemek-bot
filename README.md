@@ -45,7 +45,12 @@ Gizli bilgiler yerelde `ayarlar.py`'den, sunucuda ortam değişkenlerinden okunu
 - `TOKEN`: WhatsApp API erişim anahtarı
 - `TELEFON_ID`: WhatsApp telefon numarası ID'si
 - `GROQ_ANAHTARI` (isteğe bağlı): sohbet modu için Groq API anahtarı
+- `SAHIP_NUMARASI` (isteğe bağlı): önerilerin iletileceği numara (`905xxxxxxxxx`)
 - `SOHBET_NUMARALARI` (isteğe bağlı): sohbet modunu kullanabilecek numaralar, virgülle ayrılmış (`905xxxxxxxxx`)
+
+## Öneri
+
+Kullanıcılar `öneri <mesaj>` yazarak fikir gönderebilir, mesaj sahibine WhatsApp'tan iletilir (kişi başı 5 öneri sınırı). WhatsApp kuralı gereği sahibin son 24 saatte bota mesaj yazmış olması gerekir; iletilemezse öneri loglarda `ONERI:` ile görünür.
 
 ## Sohbet modu
 
@@ -114,7 +119,12 @@ Secrets are read from `ayarlar.py` locally, or from environment variables in pro
 - `TOKEN`: WhatsApp API access token
 - `TELEFON_ID`: WhatsApp phone number ID
 - `GROQ_ANAHTARI` (optional): Groq API key for chat mode
+- `SAHIP_NUMARASI` (optional): number that receives suggestions (`905xxxxxxxxx`)
 - `SOHBET_NUMARALARI` (optional): comma-separated numbers allowed to use chat mode (`905xxxxxxxxx`)
+
+## Suggestions
+
+Users can send ideas with `öneri <message>`; the message is forwarded to the owner on WhatsApp (limit 5 per user). Per WhatsApp rules the owner must have messaged the bot within the last 24 hours; otherwise the suggestion is only visible in the logs as `ONERI:`.
 
 ## Chat mode
 

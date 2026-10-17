@@ -15,6 +15,7 @@ except ImportError:
     TOKEN = os.environ["TOKEN"]
     TELEFON_ID = os.environ["TELEFON_ID"]
 GROQ_ANAHTARI = os.environ.get("GROQ_ANAHTARI", "")
+SAHIP_NUMARASI = os.environ.get("SAHIP_NUMARASI", "").strip()
 SOHBET_ISMI = os.environ.get("SOHBET_ISMI", "")
 SOHBET_NUMARALARI = {n.strip() for n in os.environ.get("SOHBET_NUMARALARI", "").split(",") if n.strip()}
 import requests
@@ -56,7 +57,7 @@ def cevap_gonder(numara, metin):
     })
 
 
-YARDIM_METNI = "bugün, yarın, 2 gün sonra, 25 ekim, kahvaltı ya da akşam yaz"
+YARDIM_METNI = "bugün, yarın, 2 gün sonra, 25 ekim, kahvaltı ya da akşam yaz. Fikrin varsa: öneri <mesajın>"
 
 
 def liste_gonder(numara):
@@ -82,6 +83,7 @@ def liste_gonder(numara):
                     ]},
                     {"title": "Diğer", "rows": [
                         {"id": "2 gun sonra", "title": "2 gün sonra"},
+                        {"id": "oneri", "title": "Öneri / fikir"},
                     ]},
                 ],
             },
@@ -228,6 +230,41 @@ def sohbet_mi(kimden, yazi):
     return False
 
 
+ONERI_SAYAC = {}
+ONERI_LIMIT = 5
+
+
+def oneri_mi(kimden, yazi):
+    """'öneri ...' mesajıysa işler ve True döner."""
+    soru = temizle(yazi)
+    ilk = soru.split()[0].strip(":,.-") if soru.split() else ""
+    if ilk not in ("oneri", "fikir"):
+        return False
+    parcalar = yazi.strip().split(None, 1)
+    metin = parcalar[1].strip() if len(parcalar) > 1 else ""
+    if not metin:
+        cevap_gonder(kimden, "Fikrini şöyle yaz: öneri haftalık menü de gelsin")
+        return True
+    if ONERI_SAYAC.get(kimden, 0) >= ONERI_LIMIT:
+        cevap_gonder(kimden, "Çok fikrin var, teşekkürler! Biraz sonra tekrar yazabilirsin.")
+        return True
+    ONERI_SAYAC[kimden] = ONERI_SAYAC.get(kimden, 0) + 1
+    metin = metin[:1000]
+    print("ONERI:", kimden, metin)
+    if SAHIP_NUMARASI:
+        try:
+            gonder({
+                "messaging_product": "whatsapp",
+                "to": SAHIP_NUMARASI,
+                "type": "text",
+                "text": {"body": f"Öneri ({kimden}):\n{metin}"},
+            })
+        except requests.RequestException as hata:
+            print("ONERI iletilemedi:", repr(hata))
+    cevap_gonder(kimden, "Teşekkürler, fikrini Taha'ya ilettim!")
+    return True
+
+
 def cevapla(kimden, soru):
     tarih = tarih_bul(soru)
     if "kahvalti" in soru or "sabah" in soru:
@@ -256,12 +293,15 @@ def mesaj_isle(veri):
         if mesaj["type"] == "text":
             yazi = mesaj["text"]["body"]
             print(kimden, "yazdı:", yazi)
-            if not sohbet_mi(kimden, yazi):
+            if not sohbet_mi(kimden, yazi) and not oneri_mi(kimden, yazi):
                 cevapla(kimden, temizle(yazi))
         elif mesaj["type"] == "interactive":
             secim = mesaj["interactive"].get("list_reply", {}).get("id", "")
             print(kimden, "seçti:", secim)
-            cevapla(kimden, secim)
+            if secim == "oneri":
+                oneri_mi(kimden, "oneri")
+            else:
+                cevapla(kimden, secim)
         else:
             cevap_gonder(kimden, "Şimdilik sadece yazılı mesajları anlıyorum. " + YARDIM_METNI)
 
