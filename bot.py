@@ -22,6 +22,7 @@ GROQ_ANAHTARI = os.environ.get("GROQ_ANAHTARI", "")
 META_APP_SECRET = os.environ.get("META_APP_SECRET", "").strip()
 SAHIP_NUMARASI = os.environ.get("SAHIP_NUMARASI", "").strip()
 SOHBET_ISMI = os.environ.get("SOHBET_ISMI", "")
+ONERI_SINIRSIZ = {n.strip() for n in os.environ.get("ONERI_SINIRSIZ", "").split(",") if n.strip()}
 SOHBET_NUMARALARI = {n.strip() for n in os.environ.get("SOHBET_NUMARALARI", "").split(",") if n.strip()}
 import requests
 import yemek
@@ -297,7 +298,7 @@ def sohbet_mi(kimden, yazi):
     if soru == "sohbet":
         SOHBETTE.add(kimden)
         selam = f"Selam {SOHBET_ISMI}" if SOHBET_ISMI else "Selam"
-        cevap_gonder(kimden, f"{selam}, ben Taha'nın sana özel botuyum. Mesajların yapay zeka servisine (Groq) gider. Çıkmak için 'çık' yaz. Anlat bakalım, ne var ne yok?")
+        cevap_gonder(kimden, f"{selam}, ben Taha'nın sadece senin için yaptığı botum. Burada sana yapay zeka cevap veriyor. Canın sıkıldığında buradayım. Çıkmak için 'çık' yaz. Anlat bakalım, ne var ne yok?")
         return True
     return False
 
@@ -320,7 +321,7 @@ def oneri_mi(kimden, yazi):
     gun, adet = ONERI_SAYAC.get(kimden, (None, 0))
     if gun != bugun():
         adet = 0
-    if adet >= ONERI_LIMIT:
+    if adet >= ONERI_LIMIT and kimden not in ONERI_SINIRSIZ:
         cevap_gonder(kimden, "Bugünlük fikir hakkın doldu, teşekkürler! Yarın tekrar yazabilirsin.")
         return True
     ONERI_SAYAC[kimden] = (bugun(), adet + 1)
@@ -439,7 +440,7 @@ def cevap_ilet(yazi):
             "messaging_product": "whatsapp",
             "to": numara,
             "type": "text",
-            "text": {"body": "Prof. Taha'dan cevap:\n" + mesaj},
+            "text": {"body": mesaj},
         })
     except requests.RequestException as hata:
         print("CEVAP iletilemedi:", repr(hata))
